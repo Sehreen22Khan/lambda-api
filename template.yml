@@ -61,6 +61,17 @@ Resources:
                   - s3:GetBucketLocation
                 Resource: 
                   - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
+        - PolicyName: CodePipelineCodeBuildAccessPolicy  # New policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                  - codebuild:BatchGetProjects
+                  - codebuild:ListBuildsForProject
+                Resource: !GetAtt CodeBuildProject.Arn
 
   CloudFormationDeployRole:
     Type: AWS::IAM::Role
