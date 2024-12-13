@@ -50,6 +50,17 @@ Resources:
               - Effect: Allow
                 Action: iam:PassRole
                 Resource: !GetAtt CloudFormationDeployRole.Arn
+        - PolicyName: CodePipelineS3AccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetBucketLocation
+                Resource: 
+                  - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
 
   CloudFormationDeployRole:
     Type: AWS::IAM::Role
@@ -63,7 +74,7 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
-        - arn:aws:iam::aws:policy/AdministratorAccess  # Adjust as needed
+        - arn:aws:iam::aws:policy/AdministratorAccess  # Adjust as needed for least privilege
       Path: "/"
 
   CodeBuildServiceRole:
