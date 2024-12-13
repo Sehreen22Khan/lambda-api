@@ -29,13 +29,14 @@ Resources:
 
   LambdaFunction:
     Type: AWS::Lambda::Function
+    DependsOn: [LambdaExecutionRole]
     Properties:
       FunctionName: !Ref ApplicationName
-      Role: !GetAtt LambdaExecutionRole.Arn  # Ensure this role exists or is passed appropriately
+      Role: !GetAtt LambdaExecutionRole.Arn
       Handler: wsgi_handler.lambda_handler
       Runtime: python3.9
       Code:
-        S3Bucket: !Ref DEPLOYMENT_BUCKET  # Dynamically filled by package command
+        S3Bucket: !Ref ArtifactBucket
         S3Key: latest_build.zip
       Timeout: 30
       MemorySize: 512

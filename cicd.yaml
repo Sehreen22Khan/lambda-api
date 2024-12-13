@@ -57,6 +57,28 @@ Resources:
         - arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess
         - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
       Path: "/"
+      Policies:
+        - PolicyName: CodeBuildCloudWatchLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 
+                  - arn:aws:logs:*:*:log-group:/aws/codebuild/*:* 
+        - PolicyName: CodeBuildS3AccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetBucketLocation
+                Resource: !Sub "arn:aws:s3:::${ArtifactBucket}/*"
 
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -205,8 +227,3 @@ Resources:
                 ChangeSetName: !Sub "${ApplicationName}-changeset"
                 StackName: !Ref "AWS::StackName"
               RunOrder: 2
-
-# Removed Lambda Function, API Gateway, and CloudFront resources from the main template
-
-Outputs:
-  # Removed Outputs as they are now part of the deployed packaged-template.yml
