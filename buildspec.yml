@@ -20,15 +20,14 @@ phases:
       - cp -r * build || echo "No files to copy."
       - echo "Changing to build directory..."
       - cd build
+      - echo "Listing build directory contents:"
+      - ls -la
       - echo "Installing Python dependencies..."
       - pip install -r requirements.txt -t .
       - echo "Zipping build artifacts..."
       - zip -r ../latest_build.zip .
       - echo "Packaging CloudFormation template..."
-      - aws cloudformation package \
-          --template-file ../template.yml \
-          --s3-bucket $DEPLOYMENT_BUCKET \
-          --output-template-file ../packaged-template.yml
+      - aws cloudformation package --template-file ../template.yml --s3-bucket $DEPLOYMENT_BUCKET --output-template-file ../packaged-template.yml
 
 artifacts:
   files:
