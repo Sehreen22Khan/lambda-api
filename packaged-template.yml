@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Packaged Template to Deploy Flask-based API on Lambda behind API Gateway and CloudFront.
+
+Resources:
+
+  ############################################
+  # IAM Roles (if any additional roles are needed)
+  ############################################
+
+  # Example: Lambda Execution Role (if not reusing existing one)
+  # LambdaExecutionRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: "2012-10-17"
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service: lambda.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  #     Path: "/"
+
+  ############################################
+  # Lambda Function
+  ############################################
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref ApplicationName
+      Role: !GetAtt LambdaExecutionRole.Arn  # Ensure this role exists or is passed appropriately
+      Handler: wsgi_handler.lambda_handler
+      Runtime: python3.9
+      Code:
+        S3Bucket: !Ref DEPLOYMENT_BUCKET  # Dynamically filled by package command
+        S3Key: latest_build.zip
+      Timeout: 30
+      MemorySize: 512
+      Environment:
+        Variables:
+          FLASK_ENV: production
+
+  ############################################
+  # API Gateway
+  ############################################
+
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ApplicationName}-api"
+      EndpointConfiguration:
+        Types: ["REGIONAL"]
+
+  ApiGatewayResourceProxy:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: "{proxy+}"
+
+  ApiGatewayMethodProxy:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !Ref ApiGatewayResourceProxy
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+
+  ApiGatewayMethodRoot:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations"
+      MethodResponses:
+        - StatusCode: 200
+
+  LambdaPermissionApiGateway:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*/*"
+
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ApiGatewayMethodProxy
+      - ApiGatewayMethodRoot
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: prod
+
+  ############################################
+  # CloudFront Distribution
+  ############################################
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultCacheBehavior:
+          TargetOriginId: apiOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          ForwardedValues:
+            QueryString: true
+        DefaultRootObject: ""
+        Origins:
+          - DomainName: !Sub "${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+            Id: apiOrigin
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+        HttpVersion: http2
+        PriceClass: PriceClass_100
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+Outputs:
+  ApiUrl:
+    Description: "The API Gateway invoke URL"
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+  CloudFrontUrl:
+    Description: "The CloudFront Distribution URL"
+    Value: !GetAtt CloudFrontDistribution.DomainName
