@@ -213,6 +213,8 @@ Resources:
         EnvironmentVariables:
           - Name: PACKAGE_NAME
             Value: latest_build.zip
+          - Name: DEPLOYMENT_BUCKET
+            Value: !Ref ArtifactBucket
       Source:
         Type: CODEPIPELINE
       TimeoutInMinutes: 10
