@@ -14,9 +14,6 @@ Parameters:
     Type: String
     Default: main
     Description: GitHub branch to build from
-  # GitHubOAuthToken:
-  #   Type: AWS::SSM::Parameter::Value<String>
-  #   Description: SSM parameter name that stores the GitHub OAuth token (ensure it's a secure string parameter)
   ApplicationName:
     Type: String
     Default: flask-lambda-api
@@ -95,7 +92,7 @@ Resources:
     Properties:
       FunctionName: !Ref ApplicationName
       Role: !GetAtt LambdaExecutionRole.Arn
-      Handler: wsgi_handler.lambda_handler # You need a wsgi handler that calls your Flask app
+      Handler: wsgi_handler.lambda_handler
       Runtime: python3.9
       Code:
         S3Bucket: !Ref ArtifactBucket
@@ -219,26 +216,6 @@ Resources:
       Source:
         Type: CODEPIPELINE
       TimeoutInMinutes: 10
-      # You can define inline build commands here or in a buildspec.yml in the repo
-      # For example:
-      BuildSpec: |
-        version: 0.2
-
-        phases:
-          install:
-            commands:
-              - pip install --upgrade pip
-              - pip install awslambdaric mangum # Mangum or another WSGI adapter
-          build:
-            commands:
-              - mkdir build
-              - cp -r * build
-              - cd build
-              - pip install -r requirements.txt -t .
-              - zip -r ../$PACKAGE_NAME .
-        artifacts:
-          files:
-            - latest_build.zip
 
   ############################################
   # CodePipeline
