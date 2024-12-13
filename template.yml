@@ -42,6 +42,29 @@ Resources:
         - arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess
         - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
       Path: "/"
+      Policies:
+        - PolicyName: CodePipelinePassCFNDeployRolePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt CloudFormationDeployRole.Arn
+
+  CloudFormationDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess  # Adjust as needed
+      Path: "/"
 
   CodeBuildServiceRole:
     Type: AWS::IAM::Role
@@ -135,32 +158,6 @@ Resources:
   # CodePipeline
   ############################################
 
-  CodePipelineRolePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Sub "${ApplicationName}-CodePipelinePolicy"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Resource: "*"
-            Action:
-              - codebuild:BatchGetBuilds
-              - codebuild:StartBuild
-              - codebuild:BatchGetProjects
-              - codebuild:ListBuildsForProject
-              - s3:* # For artifact bucket
-              - lambda:UpdateFunctionCode
-              - cloudformation:CreateChangeSet
-              - cloudformation:ExecuteChangeSet
-              - cloudformation:DescribeStacks
-              - cloudformation:UpdateStack
-              - cloudformation:CreateStack
-              - cloudformation:DeleteStack
-              - codepipeline:*
-      Roles:
-        - !Ref CodePipelineServiceRole
-
   CodePipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -214,7 +211,7 @@ Resources:
                 StackName: !Ref "AWS::StackName"
                 TemplatePath: BuildArtifact::packaged-template.yml
                 Capabilities: CAPABILITY_IAM
-                RoleArn: !GetAtt CodePipelineServiceRole.Arn  # Added RoleArn
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn  # Specify the dedicated role
               InputArtifacts:
                 - Name: BuildArtifact
             - Name: ExecuteChangeSet
@@ -227,5 +224,5 @@ Resources:
                 ActionMode: CHANGE_SET_EXECUTE
                 ChangeSetName: !Sub "${ApplicationName}-changeset"
                 StackName: !Ref "AWS::StackName"
-                RoleArn: !GetAtt CodePipelineServiceRole.Arn  # Added RoleArn
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn  # Specify the dedicated role
               RunOrder: 2
