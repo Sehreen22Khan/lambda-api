@@ -208,14 +208,15 @@ Resources:
                 Owner: AWS
                 Provider: CloudFormation
                 Version: 1
-              InputArtifacts:
-                - Name: BuildArtifact
               Configuration:
                 ActionMode: CHANGE_SET_REPLACE
                 ChangeSetName: !Sub "${ApplicationName}-changeset"
                 StackName: !Ref "AWS::StackName"
                 TemplatePath: BuildArtifact::packaged-template.yml
                 Capabilities: CAPABILITY_IAM
+                RoleArn: !GetAtt CodePipelineServiceRole.Arn  # Added RoleArn
+              InputArtifacts:
+                - Name: BuildArtifact
             - Name: ExecuteChangeSet
               ActionTypeId:
                 Category: Deploy
@@ -226,4 +227,5 @@ Resources:
                 ActionMode: CHANGE_SET_EXECUTE
                 ChangeSetName: !Sub "${ApplicationName}-changeset"
                 StackName: !Ref "AWS::StackName"
+                RoleArn: !GetAtt CodePipelineServiceRole.Arn  # Added RoleArn
               RunOrder: 2
