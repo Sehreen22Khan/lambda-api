@@ -300,7 +300,7 @@ Resources:
                 ActionMode: CHANGE_SET_REPLACE
                 ChangeSetName: !Sub "${ApplicationName}-changeset"
                 StackName: !Ref "AWS::StackName"
-                TemplatePath: BuildArtifact::template.yml
+                TemplatePath: BuildArtifact::packaged-template.yml
                 Capabilities: CAPABILITY_IAM
             - Name: ExecuteChangeSet
               ActionTypeId:

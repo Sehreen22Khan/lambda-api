@@ -12,6 +12,12 @@ phases:
       - cd build
       - pip install -r requirements.txt -t .
       - zip -r ../latest_build.zip .
+      - aws cloudformation package \
+          --template-file template.yml \
+          --s3-bucket sks-lambda-bucket \
+          --output-template-file packaged-template.yml
+
 artifacts:
   files:
     - latest_build.zip
+    - packaged-template.yml
