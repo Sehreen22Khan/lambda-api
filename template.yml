@@ -234,6 +234,12 @@ Resources:
                 TemplatePath: BuildArtifact::packaged-template.yml
                 Capabilities: CAPABILITY_IAM
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn  # Specify the dedicated role
+                ParameterOverrides: !Sub |
+                  {
+                    "GitHubRepositoryOwner": "${GitHubRepositoryOwner}",
+                    "GitHubRepositoryName": "${GitHubRepositoryName}",
+                    "DeploymentBucketName": "${DeploymentBucketName}"
+                  }
               InputArtifacts:
                 - Name: BuildArtifact
             - Name: ExecuteChangeSet
