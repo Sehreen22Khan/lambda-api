@@ -3,17 +3,30 @@ version: 0.2
 phases:
   install:
     commands:
+      - echo "Installing dependencies..."
       - pip install --upgrade pip
       - pip install awslambdaric mangum
+  pre_build:
+    commands:
+      - echo "Cleaning up any existing build directory..."
+      - rm -rf build || true
+      - echo "Creating build directory..."
+      - mkdir build
   build:
     commands:
-      - mkdir build
-      - cp -r * build
+      - echo "Listing source directory contents:"
+      - ls -la
+      - echo "Copying source files to build directory..."
+      - cp -r * build || echo "No files to copy."
+      - echo "Changing to build directory..."
       - cd build
+      - echo "Installing Python dependencies..."
       - pip install -r requirements.txt -t .
+      - echo "Zipping build artifacts..."
       - zip -r ../latest_build.zip .
+      - echo "Packaging CloudFormation template..."
       - aws cloudformation package \
-          --template-file ../cicd.yml \
+          --template-file ../template.yml \
           --s3-bucket $DEPLOYMENT_BUCKET \
           --output-template-file ../packaged-template.yml
 
