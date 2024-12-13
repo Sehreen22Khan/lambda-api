@@ -1,0 +1,35 @@
+CodeBuildProject:
+  Type: AWS::CodeBuild::Project
+  Properties:
+    Name: !Sub "${ApplicationName}-build"
+    ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+    Artifacts:
+      Type: CODEPIPELINE
+    Environment:
+      ComputeType: BUILD_GENERAL1_SMALL
+      Image: aws/codebuild/standard:6.0
+      Type: LINUX_CONTAINER
+      EnvironmentVariables:
+        - Name: PACKAGE_NAME
+          Value: latest_build.zip
+    Source:
+      Type: CODEPIPELINE
+    TimeoutInMinutes: 10
+    BuildSpec: |
+      version: 0.2
+
+      phases:
+        install:
+          commands:
+            - pip install --upgrade pip
+            - pip install awslambdaric mangum
+        build:
+          commands:
+            - mkdir build
+            - cp -r * build
+            - cd build
+            - pip install -r requirements.txt -t .
+            - zip -r ../latest_build.zip .
+      artifacts:
+        files:
+          - latest_build.zip

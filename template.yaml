@@ -4,19 +4,19 @@ Description: >
   that sources code from a GitHub repository.
 
 Parameters:
-  GitHubOwner:
+  GitHubRepositoryOwner:
     Type: String
     Description: GitHub repository owner (e.g., my-github-username)
-  GitHubRepo:
+  GitHubRepositoryName:
     Type: String
     Description: GitHub repository name (e.g., lambda-api)
   GitHubBranch:
     Type: String
     Default: main
     Description: GitHub branch to build from
-  GitHubOAuthToken:
-    Type: AWS::SSM::Parameter::Value<String>
-    Description: SSM parameter name that stores the GitHub OAuth token (ensure it's a secure string parameter)
+  # GitHubOAuthToken:
+  #   Type: AWS::SSM::Parameter::Value<String>
+  #   Description: SSM parameter name that stores the GitHub OAuth token (ensure it's a secure string parameter)
   ApplicationName:
     Type: String
     Default: flask-lambda-api
@@ -39,7 +39,7 @@ Resources:
               Service: codepipeline.amazonaws.com
             Action: sts:AssumeRole
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AWSCodePipelineFullAccess
+        - arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess
         - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
       Path: "/"
 
@@ -112,13 +112,6 @@ Resources:
       Name: !Sub "${ApplicationName}-api"
       EndpointConfiguration:
         Types: ["REGIONAL"]
-
-  ApiGatewayResourceRoot:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref ApiGatewayRestApi
-      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-      PathPart: ""
 
   ApiGatewayResourceProxy:
     Type: AWS::ApiGateway::Resource
@@ -295,10 +288,10 @@ Resources:
                 Provider: GitHub
                 Version: 1
               Configuration:
-                Owner: !Ref GitHubOwner
-                Repo: !Ref GitHubRepo
+                Owner: !Ref GitHubRepositoryOwner
+                Repo: !Ref GitHubRepositoryName
                 Branch: !Ref GitHubBranch
-                OAuthToken: !Ref GitHubOAuthToken
+                OAuthToken: !Sub "{{resolve:secretsmanager:github/personal-access-token:SecretString:github-token}}"
                 PollForSourceChanges: "false"
               OutputArtifacts:
                 - Name: SourceArtifact
