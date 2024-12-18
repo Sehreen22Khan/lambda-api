@@ -220,8 +220,8 @@ Resources:
                 RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 ParameterOverrides: !Sub |
                   {
-                    "GitHubRepositoryOwner": "${GitHubRepositoryOwner}",
-                    "GitHubRepositoryName": "${GitHubRepositoryName}"
+                    "ArtifactBucket": "${ArtifactBucketName}",
+                    "ApplicationName": "${ApplicationName}"
                   }
               InputArtifacts:
                 - Name: BuildArtifact

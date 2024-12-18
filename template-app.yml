@@ -6,11 +6,9 @@ Parameters:
   ArtifactBucket:
     Type: String
     Description: Name of the S3 bucket containing build artifacts
-    Default: ""
   ApplicationName:
     Type: String
     Description: Name of the Lambda and associated resources
-    Default: ""
 
 Resources:
 
