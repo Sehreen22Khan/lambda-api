@@ -1,7 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Deploy a Flask-based API on Lambda behind API Gateway and CloudFront with a CI/CD pipeline
-  that sources code from a GitHub repository.
+  CI/CD Pipeline for deploying a Flask-based API on Lambda behind API Gateway and CloudFront.
 
 Parameters:
   GitHubRepositoryOwner:
@@ -82,7 +81,6 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
-        - arn:aws:iam::aws:policy/AdministratorAccess  # Adjust as needed for least privilege
       Path: "/"
 
   CodeBuildServiceRole:
@@ -123,20 +121,6 @@ Resources:
                 Resource: 
                   - !Sub "arn:aws:s3:::${ArtifactBucket}/*"
 
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: "/"
-
   ############################################
   # Artifacts (S3 Bucket for CodePipeline)
   ############################################
@@ -149,6 +133,8 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
 
   ############################################
   # CodeBuild Project
@@ -231,7 +217,7 @@ Resources:
                 StackName: !Ref "AWS::StackName"
                 TemplatePath: BuildArtifact::packaged-template.yml
                 Capabilities: CAPABILITY_IAM
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn  # Specify the dedicated role
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
                 ParameterOverrides: !Sub |
                   {
                     "GitHubRepositoryOwner": "${GitHubRepositoryOwner}",
@@ -249,122 +235,13 @@ Resources:
                 ActionMode: CHANGE_SET_EXECUTE
                 ChangeSetName: !Sub "${ApplicationName}-changeset"
                 StackName: !Ref "AWS::StackName"
-                RoleArn: !GetAtt CloudFormationDeployRole.Arn  # Specify the dedicated role
+                RoleArn: !GetAtt CloudFormationDeployRole.Arn
               RunOrder: 2
 
-  ############################################
-  # Lambda Function
-  ############################################
-
-  LambdaFunction:
-    Type: AWS::Lambda::Function
-    DependsOn: [LambdaExecutionRole]
-    Properties:
-      FunctionName: !Ref ApplicationName
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Handler: wsgi_handler.lambda_handler
-      Runtime: python3.9
-      Code:
-        S3Bucket: !Ref ArtifactBucket
-        S3Key: latest_build.zip
-      Timeout: 30
-      MemorySize: 512
-      Environment:
-        Variables:
-          FLASK_ENV: production
-
-  ############################################
-  # API Gateway
-  ############################################
-
-  ApiGatewayRestApi:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: !Sub "${ApplicationName}-api"
-      EndpointConfiguration:
-        Types: ["REGIONAL"]
-
-  ApiGatewayResourceProxy:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref ApiGatewayRestApi
-      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
-      PathPart: "{proxy+}"
-
-  ApiGatewayMethodProxy:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref ApiGatewayRestApi
-      ResourceId: !Ref ApiGatewayResourceProxy
-      HttpMethod: ANY
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations"
-      MethodResponses:
-        - StatusCode: 200
-
-  ApiGatewayMethodRoot:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref ApiGatewayRestApi
-      ResourceId: !GetAtt ApiGatewayRestApi.RootResourceId
-      HttpMethod: ANY
-      AuthorizationType: NONE
-      Integration:
-        Type: AWS_PROXY
-        IntegrationHttpMethod: POST
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunction.Arn}/invocations"
-      MethodResponses:
-        - StatusCode: 200
-
-  LambdaPermissionApiGateway:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: lambda:InvokeFunction
-      FunctionName: !Ref LambdaFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGatewayRestApi}/*/*"
-
-  ApiGatewayDeployment:
-    Type: AWS::ApiGateway::Deployment
-    DependsOn:
-      - ApiGatewayMethodProxy
-      - ApiGatewayMethodRoot
-    Properties:
-      RestApiId: !Ref ApiGatewayRestApi
-      StageName: prod
-
-  ############################################
-  # CloudFront Distribution
-  ############################################
-
-  CloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Enabled: true
-        DefaultCacheBehavior:
-          TargetOriginId: apiOrigin
-          ViewerProtocolPolicy: redirect-to-https
-          ForwardedValues:
-            QueryString: true
-        DefaultRootObject: ""
-        Origins:
-          - DomainName: !Sub "${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com"
-            Id: apiOrigin
-            CustomOriginConfig:
-              OriginProtocolPolicy: https-only
-        HttpVersion: http2
-        PriceClass: PriceClass_100
-        ViewerCertificate:
-          CloudFrontDefaultCertificate: true
-
 Outputs:
-  ApiUrl:
-    Description: "The API Gateway invoke URL"
-    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
-  CloudFrontUrl:
-    Description: "The CloudFront Distribution URL"
-    Value: !GetAtt CloudFrontDistribution.DomainName 
+  ArtifactBucketName:
+    Description: "Name of the Artifact S3 bucket"
+    Value: !Ref ArtifactBucket
+  CodePipelineName:
+    Description: "Name of the CodePipeline"
+    Value: !Ref CodePipeline

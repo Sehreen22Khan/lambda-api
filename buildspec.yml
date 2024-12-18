@@ -27,7 +27,7 @@ phases:
       - echo "Zipping build artifacts..."
       - zip -r ../latest_build.zip .
       - echo "Packaging CloudFormation template..."
-      - aws cloudformation package --template-file ../template.yml --s3-bucket $ARTIFACT_BUCKET --output-template-file ../packaged-template.yml
+      - aws cloudformation package --template-file ../template-app.yml --s3-bucket $ARTIFACT_BUCKET --output-template-file ../packaged-template.yml
 
 artifacts:
   files:
