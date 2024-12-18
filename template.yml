@@ -242,6 +242,17 @@ Outputs:
   ArtifactBucketName:
     Description: "Name of the Artifact S3 bucket"
     Value: !Ref ArtifactBucket
+    Export:
+      Name: !Sub "${AWS::StackName}-ArtifactBucketName"
+
+  ApplicationName:
+    Description: "Name of the Application"
+    Value: !Ref ApplicationName
+    Export:
+      Name: !Sub "${AWS::StackName}-ApplicationName"
+
   CodePipelineName:
     Description: "Name of the CodePipeline"
     Value: !Ref CodePipeline
+    Export:
+      Name: !Sub "${AWS::StackName}-CodePipelineName"

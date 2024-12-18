@@ -6,9 +6,11 @@ Parameters:
   ArtifactBucket:
     Type: String
     Description: Name of the S3 bucket containing build artifacts
+    Default: ""
   ApplicationName:
     Type: String
     Description: Name of the Lambda and associated resources
+    Default: ""
 
 Resources:
 
@@ -143,6 +145,11 @@ Outputs:
   ApiUrl:
     Description: "The API Gateway invoke URL"
     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiUrl"
+
   CloudFrontUrl:
     Description: "The CloudFront Distribution URL"
     Value: !GetAtt CloudFrontDistribution.DomainName 
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFrontUrl"
